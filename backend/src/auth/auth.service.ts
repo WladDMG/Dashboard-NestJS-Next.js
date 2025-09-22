@@ -1,29 +1,47 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
+import { User, UserDocument } from './user.schema';
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+  ) {}
 
-  // fake user só pra teste (depois liga ao banco)
-  private users = [
-    { id: 1, email: 'admin@test.com', password: '$2a$10$U6izM85ApgjQ3yXq9stB4OeFY4dLh17WosQvfZ7mSj1N4R0ovOjWm' } 
-    // senha: "123456"
-  ];
 
-  async validateUser(email: string, password: string) {
-    const user = this.users.find(u => u.email === email);
+  //1. Registrar novo usuário
+  
+  async register(email: string, password: string) {
+    const existing = await this.userModel.findOne({ email });
+    if (existing) throw new ConflictException('Usuário já existe');
+
+    const hash = await bcrypt.hash(password, 10); // hash da senha
+    const user = new this.userModel({ email, password: hash });
+    await user.save();
+
+    return { message: 'Usuário registrado com sucesso' };
+  }
+
+
+//Validar usuário (nova função)
+ 
+  async validateUser(email: string, password: string): Promise<UserDocument> {
+    const user = await this.userModel.findOne({ email });
     if (!user) throw new UnauthorizedException('Usuário não encontrado');
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Senha inválida');
 
-    return user;
+    return user; // retorna objeto usuário
   }
 
-  async login(user: any) {
-    const payload = { sub: user.id, email: user.email };
-    return this.jwtService.sign(payload);
+  // login
+  async login(user: UserDocument) {
+    const payload = { sub: user._id, email: user.email };
+    return { token: this.jwtService.sign(payload) }; // retorna JWT
   }
 }

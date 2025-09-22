@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,6 +14,7 @@ export default function LoginPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
+      credentials: "include", // ⚠️ importante para enviar/receber cookie HTTP-only
     });
 
     if (!res.ok) {
@@ -20,18 +22,15 @@ export default function LoginPage() {
       return;
     }
 
-    const data = await res.json();
-    localStorage.setItem("token", data.token); // salva o JWT
-    window.location.href = "/dashboard"; // redireciona
+    alert("Login realizado com sucesso!");
+    window.location.href = "/dashboard";
   };
 
   return (
     <div className="flex h-screen items-center justify-center">
-      <form
-        onSubmit={handleLogin}
-        className="w-96 p-6 bg-white shadow-md rounded-lg space-y-4"
-      >
-        <h1 className="text-xl text-gray-900 font-bold">Login</h1>
+      <form className="w-96 p-6 bg-white shadow-md rounded-lg space-y-4" onSubmit={handleLogin}>
+        <h1 className="text-xl font-bold text-gray-900">Login</h1>
+
         <input
           type="email"
           placeholder="Email"
@@ -39,6 +38,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+
         <input
           type="password"
           placeholder="Senha"
@@ -46,12 +46,20 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
         >
           Entrar
         </button>
+
+        <p className="text-sm text-gray-700 text-center">
+          Não tem uma conta?{" "}
+          <Link href="/register" className="text-blue-600 hover:underline">
+            Registrar
+          </Link>
+        </p>
       </form>
     </div>
   );
